@@ -1,11 +1,13 @@
 #deps
 import os
 import sys
+import time 
 
 #pip install texttable
 import texttable as tt
 
 import curses
+from curses import panel   
 
 from MonsterItem import MonsterItem
 from Color import Color
@@ -31,8 +33,20 @@ class Monster:
 		for i, obj in enumerate(content):
 			self.items.append(MonsterItem(i, obj, self.header, format))
 		#define first selected item :)
-		self.selectedItem = self.items[0]
 		self.skipLines = 3 #amount for useless lines (top )
+		self.position = 0
+		self.tableHeight = 0
+		self.tableLeft = 0
+
+		#screen thingys thanks to curse
+		stdscreen = curses.initscr()
+		curses.start_color()
+		curses.use_default_colors()
+		self.window = stdscreen.subwin(0,0)
+		self.window.keypad(1)
+		self.panel = panel.new_panel(self.window)
+		self.panel.hide()
+		panel.update_panels()
 
 
 
@@ -56,6 +70,7 @@ class Monster:
 		os.system('clear')  # on linux / os 
 
 	def alignTable(self, table):
+		spaces = ""
 		#grab tty size (in characters), see https://stackoverflow.com/questions/566746/how-to-get-linux-console-window-width-in-python
 		rows, columns = os.popen('stty size', 'r').read().split()
 		#how long is this table?
@@ -72,6 +87,8 @@ class Monster:
 		for i, line in enumerate(table):
 			line = spaces + line 
 			table[i] = line
+
+		self.tableLeft = len(spaces)
 		return table
 
 	def generateTable(self):
@@ -108,29 +125,46 @@ class Monster:
 		####################################
 		#grab table
 		tablestr = tab.draw()
+		#print(repr(tablestr))
+		#tablestr = tablestr.replace("\n", "\r\n.!?")
 		tablestrs = tablestr.split("\n")
+		self.tableHeight = len(tablestrs)
+
+		#print(tablestrs)
+		#print("BLABLA: %s" % len(tablestrs))
+		#for line in tablestrs:
+		#	print(repr(line)+"\r")
+		#print("\n\n\n\n\n\n")
+		#but please dont delete the "\n"
+		#print(tablestrs)
 		return tablestrs
 
-
-	def render(self, color=True):
-			self.clear()
+	def render(self, color=True, serialize=False):
 			table = self.generateTable()
 			if(color):
 				table = self.colorizeTable(table)
 			table = self.alignTable(table)
-			table = self.serializeTable(table)
+			if(serialize):
+				table = self.serializeTable(table)
 			return table
 
 	def show(self):
-		table = self.render()
-		self.printTable(table)
+		#self.clear()
+		serializedTable = self.render(color=True, serialize=True)
+		self.printTable(serializedTable)
 
+	def printLine(self, line):
+		sys.stdout.write(line+"\r\n")
+
+	def printTable(self, serializedTable):
+		for index, line in enumerate(self.render(color=True, serialize=False)):
+			self.printLine(line)
 
 
 	def colorizeTable(self, table):
 		#split into lines printed
 		for i, line in enumerate(table):
-			if self.selectedItem.id == i - self.skipLines:
+			if self.position + self.skipLines == i:
 				line = self.colorLine(line, "WHITE", "RED", False)
 			else:
 				line = self.colorLine(line, "WHITE", "Black", False)
@@ -159,25 +193,15 @@ class Monster:
 	def serializeTable(self, table):
 		string = ""
 		for i, line in enumerate(table):
-			string += line + "\r\n"
+			string += line
 		return string
 
-	def printTable(self, table):
-		print(table)
-
-
-
-	def up(self):
-		newIndex = self.selectedItem.id
-		if newIndex > 0:
-			newIndex = newIndex - 1
-		self.selectedItem = self.items[newIndex]
-
-	def down(self):
-		newIndex = self.selectedItem.id
-		if newIndex < len(self.items) - 1:
-			newIndex = newIndex + 1
-		self.selectedItem = self.items[newIndex]
+	def navigate(self, n):
+		self.position += n
+		if self.position < 0:
+			self.position = 0
+		elif self.position >= len(self.items):
+			self.position = len(self.items)-1
 
 
 
@@ -187,76 +211,112 @@ class Monster:
 #############################################################################################################################################################################################
 
 
-		#inputloop for arrow keys
-	def input(self):
+	def display(self):
+		self.panel.top()
+		self.panel.show()
+		self.window.clear()
 
-		# get the curses screen window
-		screen = curses.initscr()
-		self.screen = screen
-		#Must be called if the programmer wants to use colors, and before any other color manipulation routine is called. It is good practice to call this routine right after initscr().
-		curses.start_color()
-		curses.use_default_colors()	#0 to 7
-		# turn off input echoing
-		curses.noecho()
-		# respond to keys immediately (don't wait for enter)
-		curses.cbreak()
-		# map arrow keys to special values
-		screen.keypad(True)
+		#random variabls heping in displax
+		self.unknownBuffer = ""
+		self.inputBuffer = ""
+		test = "|"
+		#curses.init_color(1337, 0, 0, 0)	## not working
+		curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
 
-		#table = self.show()
+		#main display loop
+		while True:
 
-		#this will whow the display screen even when no button is pressed
-		#screen.getch() will do a clearscreen ... so we dont have an output if we dont use this line! :??
-		curses.halfdelay(1)           # How many tenths of a second are waited, from 1 to 255
+			#pre refresh
+			maxheight, maxwidth = self.window.getmaxyx()
+			#refresh
+			self.window.clear()	#this is usefull, because if something is drawn like
+			# "123ab" and we draw "xy" at the same position 
+			# the result on the screen will be "xy3ab", because the rest wasnt properly cleared
 
-		once=True
-###############################################################
-		try:
-			while True:
-				char = screen.getch()
-				if(once):
-					curses.halfdelay(255)
-					once = False
-				if char == ord('q'):
-					break
-				elif char == 27:
-					# Don't wait for another key
-					# If it was Alt then curses has already sent the other key
-					# otherwise -1 is sent (Escape)
-					#self.screen.nodelay(True)
-					#n = self.screen.getch()
-					#if n == -1:
-					# Escape was pressed
-					break
+			self.window.refresh()	#redraws the screen buffer
+			curses.doupdate()
+			#post refresh
+			##  drawing 
+			########################
+			if(test == "|"): test = "/"
+			elif test == "/": test = "~"
+			elif test == "~": test = "\\"
+			elif test == "\\": test = "|"
+
+			self.window.addstr(maxheight-1,0, test)
+
+			#self.show()
+			table = self.render()
+			self.printTable(table)
+			#need to implement a menu api for generating a menu based on a filter of self.items
+			#input characters will define search strings for all keys inside of self.items
+			#need to implement submenu functionality
+			#pressing + key should list extra information in our table  below the current selected entry 
+
+			self.window.addstr(self.tableHeight + 2 , self.tableLeft, "===> " + self.inputBuffer, curses.A_NORMAL)
+			self.window.addstr(maxheight-1,maxwidth-15, "-> " + self.unknownBuffer, curses.A_NORMAL)
+
+			########################
+			key = self.window.getch()
+			action = self.input(key)
+			if(action == "exit"):
+				break
+
+			#if we draw (double) after getch, we can "overwrite" specific things if text is not properly drawn
+			#self.window.addstr(maxheight-1,maxwidth-15, "-> " + "      ", curses.A_NORMAL)
+
+		self.window.clear()
+		self.panel.hide()
+		panel.update_panels()
+		curses.doupdate()
+
+
+
+	#inputloop for arrow keys
+	def input(self, key):
+		ret = "ok"
+
+		if key == ord('q'):
+			ret = "exit"
+		elif key == 27:
+			# Don't wait for another key
+			# If it was Alt then curses has already sent the other key
+			# otherwise -1 is sent (Escape)
+			#self.screen.nodelay(True)
+			#n = self.screen.getch()
+			#if n == -1:
+			# Escape was pressed
+			ret = "exit"
+		###########
+		else:
+			#and check arrow of keys
+			if key == curses.KEY_RIGHT:
+				pass #screen.addstr(30, 0, 'right') # print doesn't work with curses, use addstr instead
+			elif key == curses.KEY_LEFT:
+				pass	#screen.addstr(30, 0, 'left ')    
+			elif key == curses.KEY_UP:
+				self.navigate(-1)
+			elif key == curses.KEY_DOWN:
+				self.navigate(1)
+
+			#if key in [curses.KEY_ENTER, ord('\n')]:
+			elif key in [curses.KEY_ENTER, ord('\n')]:
+				self.selectedItem = self.items[self.position]
+			###############################################
+			#command keys
+			elif key == curses.KEY_BACKSPACE: #263
+				self.inputBuffer = self.inputBuffer[:len(self.inputBuffer)-1]
+			###############################################
+			#character input
+			elif key >= 32 and key <= 126:
+				self.inputBuffer += str(unichr(key))
+			#unknown input
+			else:
+				pass
+				#negative values are KEYUP events???
+				#ignore them for now plx
+				if(key > 0 ):
+					self.unknownBuffer = str(key)
 				else:
-
-					#and check function of keys
-					if char == curses.KEY_RIGHT:
-						pass #screen.addstr(30, 0, 'right') # print doesn't work with curses, use addstr instead
-					elif char == curses.KEY_LEFT:
-						pass	#screen.addstr(30, 0, 'left ')    
-					elif char == curses.KEY_UP:
-						self.up() #screen.addstr(30, 0, 'up   ') 
-						
-					elif char == curses.KEY_DOWN:
-						self.down() #screen.addstr(30, 0, 'down ')
-					elif char == curses.KEY_ENTER:
-						screen.addstr(30, 0, 'ENTER ')
-						
-					#else:
-						#other .. print it
-					#	screen.addstr(30, 30, str()) 
-
-
-					#normal key was pressed, react
-					#reprint table
-					table = self.show()
-
-					
-					
-		finally:
-			# shut down cleanly
-			curses.nocbreak(); screen.keypad(0); curses.echo()
-			curses.endwin()
-
-			
+					pass
+		return ret

@@ -46,11 +46,13 @@ def main(argv):
 	#	sys.stdout.write("\r%d%%" % i)
 	#	sys.stdout.flush()
 
-
 	m = Monster("fancy", content, "$(id)$ | $(author)$ | $(name)$")
-	m.show()
-	m.input()
-	
+	#m.show()
+	#for line in m.render(color=True, serialize=False):
+	#	sys.stdout.write(line)
+	m.display()
+
+
 #############################################################################
 
 if __name__ == "__main__":
