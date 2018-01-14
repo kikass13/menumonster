@@ -32,11 +32,14 @@ class Monster:
 		self.interpretKeys()
 		for i, obj in enumerate(content):
 			self.items.append(MonsterItem(i, obj, self.header, format))
+		
 		#define first selected item :)
-		self.skipLines = 3 #amount for useless lines (top )
 		self.position = 0
+		self.skipLines = 3 #amount for useless lines (top )
 		self.tableHeight = 0
 		self.tableLeft = 0
+
+		self.extendedItems = [] 
 
 		#screen thingys thanks to curse
 		stdscreen = curses.initscr()
@@ -69,6 +72,7 @@ class Monster:
 	def clear(self):
 		os.system('clear')  # on linux / os 
 
+
 	def alignTable(self, table):
 		spaces = ""
 		#grab tty size (in characters), see https://stackoverflow.com/questions/566746/how-to-get-linux-console-window-width-in-python
@@ -87,9 +91,23 @@ class Monster:
 		for i, line in enumerate(table):
 			line = spaces + line 
 			table[i] = line
-
 		self.tableLeft = len(spaces)
 		return table
+
+
+	def extendItems(self, table):
+		newTable = []
+		for index, line in enumerate(table):
+			newTable.append(line)
+			if(index < self.skipLines):
+				continue
+			for item in self.items:
+				if(index - self.skipLines == item.id):
+					if(item.isExpanded()):
+						#probably add left table seperator ?! "|"
+						newTable.append("|\t -- " + item.details())
+		return newTable
+
 
 	def generateTable(self):
 		#see https://github.com/foutaise/texttable
@@ -129,7 +147,6 @@ class Monster:
 		#tablestr = tablestr.replace("\n", "\r\n.!?")
 		tablestrs = tablestr.split("\n")
 		self.tableHeight = len(tablestrs)
-
 		#print(tablestrs)
 		#print("BLABLA: %s" % len(tablestrs))
 		#for line in tablestrs:
@@ -139,22 +156,29 @@ class Monster:
 		#print(tablestrs)
 		return tablestrs
 
+
 	def render(self, color=True, serialize=False):
 			table = self.generateTable()
 			if(color):
 				table = self.colorizeTable(table)
+			#testi extension
+			table = self.extendItems(table)
+			###
 			table = self.alignTable(table)
 			if(serialize):
 				table = self.serializeTable(table)
 			return table
+
 
 	def show(self):
 		#self.clear()
 		serializedTable = self.render(color=True, serialize=True)
 		self.printTable(serializedTable)
 
+
 	def printLine(self, line):
 		sys.stdout.write(line+"\r\n")
+
 
 	def printTable(self, serializedTable):
 		for index, line in enumerate(self.render(color=True, serialize=False)):
@@ -167,15 +191,15 @@ class Monster:
 			if self.position + self.skipLines == i:
 				line = self.colorLine(line, "WHITE", "RED", False)
 			else:
-				line = self.colorLine(line, "WHITE", "Black", False)
+				line = self.colorLine(line, "WHITE", "BLACK", False)
 			table[i] = line
 		return table
-
 
 
 	def colorLine(self, line, fg="WHITE", bg="BLACK", bold=False):
 		line = self.colorText(line, fg, bg , bold)
 		return line
+
 
 	#see https://stackoverflow.com/questions/2330245/python-change-text-color-in-shell
 	#http://ascii-table.com/ansi-escape-sequences.php
@@ -196,14 +220,13 @@ class Monster:
 			string += line
 		return string
 
+
 	def navigate(self, n):
 		self.position += n
 		if self.position < 0:
 			self.position = 0
 		elif self.position >= len(self.items):
 			self.position = len(self.items)-1
-
-
 
 
 #############################################################################################################################################################################################
@@ -253,6 +276,10 @@ class Monster:
 			#need to implement submenu functionality
 			#pressing + key should list extra information in our table  below the current selected entry 
 
+
+			#16.02. broesel bday ;)
+
+
 			self.window.addstr(self.tableHeight + 2 , self.tableLeft, "===> " + self.inputBuffer, curses.A_NORMAL)
 			self.window.addstr(maxheight-1,maxwidth-15, "-> " + self.unknownBuffer, curses.A_NORMAL)
 
@@ -269,7 +296,6 @@ class Monster:
 		self.panel.hide()
 		panel.update_panels()
 		curses.doupdate()
-
 
 
 	#inputloop for arrow keys
@@ -304,6 +330,14 @@ class Monster:
 				self.selectedItem = self.items[self.position]
 			###############################################
 			#command keys
+			elif key == 9:	# 9 = TAB	# ++++ = 49 #
+				item = self.items[self.position]
+				#check if not allready extended
+				if(item.isExpanded()):
+					item.contract()
+				else:
+					item.expand()
+
 			elif key == curses.KEY_BACKSPACE: #263
 				self.inputBuffer = self.inputBuffer[:len(self.inputBuffer)-1]
 			###############################################

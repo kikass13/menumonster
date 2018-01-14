@@ -13,6 +13,7 @@ class MonsterItem:
 		self.data = obj.__dict__
 		self.format = format
 		self.relevantKeys = relevantKeys
+		self.expanded = False
 
 		#self.interpretKeys()
 		#self.formatData()
@@ -28,6 +29,20 @@ class MonsterItem:
 		for key in keys:
 			data.append(self.data[key])
 		return data
+
+	def isExpanded(self):
+		return(self.expanded)
+
+	def expand(self):
+		self.expanded = True
+
+	def contract(self):
+		self.expanded = False
+
+	def details(self):
+		string = ("detailed information " + str(self.id))
+		return string
+
 
 	# def interpretKeys(self):
 	# 	formatKeys = []
