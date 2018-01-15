@@ -198,16 +198,17 @@ class MonsterTable:
 	#resolve DetailFormatString for specific item
 	def interpretDetailFormatString(self, item):
 		expandedStr = ""
-		replacers = self.detailFormat.split("|") 	#seperate formats
-		for r in replacers: 
-			content = r.split(":") #seperate formats again by key:value
-			#check if msg is also a ky, if true, use that keyname as str
-			message = self.interpretFormatKey(content[0])
-			if(message is ""):
-				message = content[0]
-			#resolve key name alone
-			keystr = content[1]
-			key = self.interpretFormatKey(keystr)
-			expandedStr += message + ":" + item.get(key) + "    "
+		if(self.detailFormat is not ""):
+			replacers = self.detailFormat.split("|") 	#seperate formats
+			for r in replacers: 
+				content = r.split(":") #seperate formats again by key:value
+				#check if msg is also a ky, if true, use that keyname as str
+				message = self.interpretFormatKey(content[0])
+				if(message is ""):
+					message = content[0]
+				#resolve key name alone
+				keystr = content[1]
+				key = self.interpretFormatKey(keystr)
+				expandedStr += message + ":" + item.get(key) + "    "
 		return expandedStr
 	#	replacers = self.mainFormat.split("|")

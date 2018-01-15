@@ -28,6 +28,6 @@ class MonsterItem:
 
 	def search(self, searchstring):
 		for key, val in self.data.iteritems():
-			if(key.find(searchstring) is not -1 or val.find(searchstring) is not -1):
+			if(key.find(searchstring) is not -1 or str(val).find(searchstring) is not -1):
 				return True
 		return False

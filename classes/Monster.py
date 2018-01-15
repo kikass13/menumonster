@@ -62,8 +62,9 @@ class Monster:
 			ret = self.display()
 		except KeyboardInterrupt as e:
 			pass
-		except Exception as e:
-			raise e
+		#except Exception as e:
+		#	raise e
+		
 		#clean up the mess curses did
 		os.system('stty sane;clear')
 		return ret

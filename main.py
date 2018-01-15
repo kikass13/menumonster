@@ -44,6 +44,8 @@ def main(argv):
 	#	sys.stdout.flush()
 	selectedItem = None
 
+	print("LELELELEL")
+	print("much more lines than you expect")
 	mainformat = "$(id)$ | $(author)$ | $(name)$ "
 	detailformat = "EXTRAlel:$(useless)$ | $(name)$:$(name)$"	#string:key | .... if string is also a key, we use the name of that key as placeholder
 	m = Monster("fancy", content, mainFormat=mainformat, detailFormat=detailformat)
