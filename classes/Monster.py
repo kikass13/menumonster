@@ -38,11 +38,13 @@ class Monster:
 		self.localFilteredItemList = []
 
 		#screen thingys thanks to curse
-		stdscreen = curses.initscr()
+		print("1")
+		self.stdscreen = curses.initscr()
 		curses.start_color()
 		curses.use_default_colors()
-		self.window = stdscreen.subwin(0,0)
+		self.window = self.stdscreen.subwin(0,0)
 		self.window.keypad(1)
+		print(self.window)
 		self.panel = panel.new_panel(self.window)
 		self.panel.hide()
 		panel.update_panels()
@@ -61,6 +63,8 @@ class Monster:
 		try:
 			ret = self.display()
 		except KeyboardInterrupt as e:
+			curses.endwin()
+			print("KeyboardInterrupt")
 			pass
 		#except Exception as e:
 		#	raise e
@@ -73,6 +77,7 @@ class Monster:
 	def display(self):
 		self.panel.top()
 		self.panel.show()
+		print(self.window)
 		self.window.clear()
 
 		#random variabls heping in displax
@@ -133,7 +138,9 @@ class Monster:
 
 			self.window.addstr(self.table.tableHeight + topLines + 2 , self.table.tableLeft, "===> " + self.inputBuffer, curses.A_NORMAL)
 			########################
+
 			key = self.window.getch()
+
 			action = self.input(key)
 			if(action == "exit"):
 				break
@@ -144,7 +151,9 @@ class Monster:
 		panel.update_panels()
 		curses.doupdate()
 		#delete the window, and do some shit so that we "turn back" to our normal shell
+		curses.endwin()
 		del self.window
+		del self.stdscreen
 
 		#return all information about the selected item to calling instance##
 		if(self.selectedItem is not None):
@@ -202,7 +211,7 @@ class Monster:
 		###########
 		#else:
 		#and check arrow of keys
-		if key == curses.KEY_RIGHT:
+		elif key == curses.KEY_RIGHT:
 			pass #screen.addstr(30, 0, 'right') # print doesn't work with curses, use addstr instead
 		elif key == curses.KEY_LEFT:
 			pass	#screen.addstr(30, 0, 'left ')    
@@ -251,13 +260,11 @@ class Monster:
 			if(len(self.inputBuffer) > 2 or self.inputBuffer.isdigit() == False ):
 				self.filterItems()
 
-		#unknown input
-		else:
-			pass
-			#negative values are KEYUP events???
-			#ignore them for now plx
-			if(key > 0 ):
-				self.unknownBuffer = str(key)
-			else:
-				pass
+		#print input
+		#negative values are KEYUP events???
+		#ignore them for now plx
+		if(key > 0 ):
+			self.unknownBuffer = str(key)
+			
+
 		return ret
