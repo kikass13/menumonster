@@ -198,7 +198,7 @@ class Monster:
 		ret = "ok"
 
 		if key == ord('q') or key == 27:
-			if(self.exitType is not "NONE"):
+			if(self.exitType is not "NONE"): 
 				ret = "exit"
 			# Don't wait for another key
 			# If it was Alt then curses has already sent the other key
