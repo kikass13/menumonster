@@ -27,10 +27,10 @@ class SomeClass:
 #############################################################################
 
 content = 	[
-				SomeClass("blaaaaaaaaaaa", "nick", "11283Z3"),
-				SomeClass("sfdgdfgetztrzhfgh", "samn", "112x23"),
+				SomeClass("blaaaaaaaablaaaaaaaaaaablaaaaaaaaaaablaaaaaaaaaaablaaaaaaaaaaaaaablaaaaaaaaaaaaaa", "nicknicknick", "11283Z3"),
+				SomeClass("sfdgdfgetdddddddddddddddddddddddddztrzhfgh", "samNNNNNNNNNNNNNn", "112x23313133131"),
 				SomeClass("xaxaaxaxaxaxa", "hulnk", "77761"),
-				SomeClass("meh, lappen", "nlop", "66684XZa1"),
+				SomeClass("meh, lappen", "nlop", "66684XZ66684XZa166684XZa166684XZa1a166684XZa166684XZa166684XZa166684XZa1"),
 			]
 #############################################################################
 
@@ -51,17 +51,8 @@ def main(argv):
 	m = Monster("fancy", content, mainFormat=mainformat, detailFormat=detailformat)
 	selectedItem = m.interactive()
 
-	print("xaxaaxa: ")
-	print("xaxaxa: ")
-	if(selectedItem is not None):
-		print("i choose an item: ")
-		print(selectedItem)
-		print("i choose an item: ")
-		print("i choose an item: ")
-		print("i choose an item: ")
-		print("i choose an item: ")
-		print("i choose an item: ")
-		print("i choose an item: ")
+
+	print(selectedItem)
 
 
 

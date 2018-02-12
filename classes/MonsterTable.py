@@ -50,7 +50,7 @@ class MonsterTable:
 		for key in tableHeader: align.append("l")		# "l", "r", "c"
 		tab.set_cols_align(align)
 		valign=[]
-		for key in tableHeader: valign.append("m")
+		for key in tableHeader: valign.append("t")		# "t", "m", "b"
 		tab.set_cols_valign(valign)
 		tab.set_deco(tab.HEADER | tab.BORDER | tab.VLINES) 	## no tab.HLINES
 		#set the header to the table
@@ -74,16 +74,49 @@ class MonsterTable:
 		#print(repr(tablestr))
 		#tablestr = tablestr.replace("\n", "\r\n.!?")
 		self.table = tablestr.split("\n")
+		####################################
+		#create Markings of this table for the first time 
+		self.recalculateMarkings()
+		# ...
 
-	#def applyFilter(self):
-	#	newTable = []
-	#	for index, line in enumerate(self.table):
-	#		if(index < self.skipLines or index >= self.skipLines + len(self.items)):
-	#			newTable.append(line)
-	#		else:
-	##			if(self.filter is "" or line.find(self.filter) > 0 ):
-	#				newTable.append(line)
-	#	self.table = newTable
+
+	def recalculateMarkings(self):
+		#mark all table entrys with their specific line index
+		#so that we have a clue how large these entrys are (how many lines)
+		#also we have to find the last line (... best guess)
+		markings = []
+		pos = 0
+		count = 0
+		proableLastLine = 0
+		for i, line in enumerate(self.table):
+			#find table number id of this entry
+			colstrs = line.split("|")
+			try:
+				if(colstrs[1].find(str(pos)) > 0):
+					markings.append([pos, i])
+					pos += 1
+			except Exception as e:
+				proableLastLine = i
+		#after marking the lines, which loooks like this:
+		#[[0, 4], [1, 7], [2, 9], [3, 11]]
+		#we want to specify the exact entry line count for every entry
+		#we want it to look like this:
+		#  [entryid , lineIndexInTable, AmountOfLines]
+		#[[0, 4, 3], [1, 7, 2], [2, 9, 2], [3, 11, 2]]
+		self.tableMarkings = []
+		for i, entry in enumerate(markings):
+			entryId = entry[0]
+			entryLineNumber = entry[1]
+			#diff to next entry calc ...
+			linecount = -1
+			if(i < len(markings)-1):
+				linecount = markings[i+1][1] - entryLineNumber
+			else:
+				linecount = proableLastLine - entryLineNumber
+			##add linecount to entry table
+			self.tableMarkings.append([entryId, markings[i][1], linecount])
+		#print(self.tableMarkings)
+		#...
 
 
 	def printLine(self, line):
@@ -109,18 +142,32 @@ class MonsterTable:
 
 
 	def expandItems(self):
-		newTable = []
-		for index, line in enumerate(self.table):
-			newTable.append(line)
-			if(index < self.skipLines):
-				continue
-			for itemid, item in enumerate(self.items):
-				if(index - self.skipLines == itemid):
-					if(item.isExpanded()):
-						#probably add left table seperator ?! "|"
-						expandedString = self.interpretDetailFormatString(item)
-						newTable.append("|-- " + expandedString)
-		self.table = newTable
+		for itemid, item in enumerate(self.items):
+			if(item.isExpanded()):
+				#find corresponding tableMarking
+				marking = self.tableMarkings[itemid]
+				#create expansionString
+				expandedString = self.interpretDetailFormatString(item)
+				newString = "|-- " + expandedString
+				#add this string to table at tableindex [markingsLineIndex + markingsLineCount]
+				expandIndex = marking[1] + marking[2]
+				self.table.insert(expandIndex, newString)
+
+				#we now have added a line to the entry, save that info into markings
+				self.recalculateMarkings()
+
+		# newTable = []
+		# for index, line in enumerate(self.table):
+		# 	newTable.append(line)
+		# 	if(index < self.skipLines):
+		# 		continue
+		# 	for itemid, item in enumerate(self.items):
+		# 		if(index - self.skipLines == itemid):
+		# 			if(item.isExpanded()):
+		# 				#probably add left table seperator ?! "|"
+		# 				expandedString = self.interpretDetailFormatString(item)
+		# 				newTable.append("|-- " + expandedString)
+		# self.table = newTable
 
 	def alignment(self):
 		spaces = ""
@@ -149,6 +196,14 @@ class MonsterTable:
 	#see https://stackoverflow.com/questions/2330245/python-change-text-color-in-shell
 	#http://ascii-table.com/ansi-escape-sequences.php
 	def colorText(self, string, fg="WHITE", bg="BLACK", bold=False):
+		#find if there is allready a coloring in this string and remove it
+		coloredStringContent="\x1b[0m"
+		index = string.find(coloredStringContent)
+		if(index > 0):
+			#remove all these bad things from the allready colored string
+			#hacky as fuck ;)
+			string = string[8:len(string)-4]
+		
 		bold = "0"
 		if bold:
 			bold = "1"
@@ -165,20 +220,37 @@ class MonsterTable:
 	def colorize(self):
 		#split into lines printed
 		#markExtended = False
+
+		#overdraw normal table
 		for i, line in enumerate(self.table):
-			#if selected item is reached
-			if self.position is not -1 and (self.position + self.skipLines) == i:
-				#if(self.items[self.position].isExpanded()):
-					#markExtended = True
-				bgc = "RED"
-			else:
-				#if we declared a expanded line before
-				bgc = "BLACK"
-				#if(markExtended):
-				#	markExtended = False
-				#	bgc = "RED"
-			#draw line regularly
-			self.table[i] = self.colorLine(line, "WHITE", bgc, False)
+			self.table[i] = self.colorLine(line, "WHITE", "BLACK", False)
+
+		#overdraw colored entry by grabbing position in tablemarkings
+		#marking[0] == entryID , marking[1] == lineNumber, marking[2] = lineCount
+		if(len(self.tableMarkings) > 0):
+			marking = self.tableMarkings[self.position]
+			#iterate through every line form startIndex in markings[1] to endindex with linecount in markins[2]
+			# endindex = startindex + linecount
+			for lineIndex in range(marking[1], marking[1] + marking[2]):
+				line = self.table[lineIndex]
+				line = self.colorLine(line, "WHITE", "RED", False)
+				self.table[lineIndex] = line
+
+		
+		#for i, line in enumerate(self.table):
+		#	#if selected item is reached
+		#	if self.position is not -1 and (self.position + self.skipLines) == i:
+		#		#if(self.items[self.position].isExpanded()):
+		#			#markExtended = True
+		#		bgc = "RED"
+		#	else:
+		#		#if we declared a expanded line before
+		#		bgc = "BLACK"
+		#		#if(markExtended):
+		#		#	markExtended = False
+		#		#	bgc = "RED"
+		#	#draw line regularly
+		#	self.table[i] = self.colorLine(line, "WHITE", bgc, False)
 
 
 
